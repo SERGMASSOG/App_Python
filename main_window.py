@@ -1,7 +1,8 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                              QPushButton, QLabel, QStackedWidget, QFrame, 
-                              QTableWidget, QTableWidgetItem, QHeaderView)
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QMainWindow, QStackedWidget, QLineEdit, QTableWidget, QHeaderView, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget,
+    QFrame, QTableWidgetItem, QMenu, QComboBox, QFormLayout, QDialog, QDateEdit, QDialogButtonBox, QMessageBox
+)
+from PySide6.QtCore import Qt, QPoint, QDate
 from PySide6.QtGui import QIcon
 
 class MainWindow(QMainWindow):
@@ -10,7 +11,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Punto de Venta")
         self.setMinimumSize(1200, 900)
         self.setStyleSheet("background: #111;")
-        self.setWindowIcon(QIcon("logo.ico"))
+        self.setWindowIcon(QIcon("Style_app/Login.png"))
 
         # Widget central y layout principal
         central_widget = QWidget()
@@ -33,7 +34,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.setSpacing(0)
 
         # Logo y nombre app
-        logo = QLabel("<b style='color:#FFFFFF;font-size:28px'></b> <span style='color:#FFFFFF;font-size:18px;'>🦋 Angel_Store 🦋</span>")
+        logo = QLabel("<b style='color:#FFFFFF;font-size:28px'></b> <span style='color:#FFFFFF;font-size:18px;'>Punto de Venta</span>")
         logo.setFixedHeight(60)
         logo.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         sidebar_layout.addWidget(logo)
@@ -70,9 +71,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addStretch()
 
         # Botón usuario parte inferior
-        from PySide6.QtWidgets import QMenu
-        from PySide6.QtCore import QPoint
-        self.user_btn = QPushButton("  👤 Angel_Store\nuser@email.com")
+        self.user_btn = QPushButton("  👤 Usuario\nuser@email.com")
         self.user_btn.setStyleSheet('''
             QPushButton {
                 color: #fff;
@@ -103,24 +102,16 @@ class MainWindow(QMainWindow):
 
         # Páginas principales
         self.pages = QStackedWidget()
-        self.pages.addWidget(self.page_dashboard())      # 0
+        self.pages.addWidget(self.page_dashboard())     # 0
         self.pages.addWidget(self.page_inventario())    # 1
         self.pages.addWidget(self.page_crm())           # 2
         self.pages.addWidget(self.page_contabilidad())  # 3
         self.pages.addWidget(self.page_ventas())        # 4
         self.pages.setStyleSheet("background: #FFFFFF;")
 
-        # Widget contenedor para el área principal (botón hamburguesa y páginas)
-        self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout()
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(0)
-        self.content_widget.setLayout(self.content_layout)
-        self.content_layout.addWidget(self.pages)
-
         # Añadir widgets al layout principal
         main_layout.addWidget(self.sidebar_frame)
-        main_layout.addWidget(self.content_widget)
+        main_layout.addWidget(self.pages)
         main_layout.setStretch(0, 0)
         main_layout.setStretch(1, 1)
 
@@ -138,59 +129,16 @@ class MainWindow(QMainWindow):
         from PySide6.QtWidgets import QApplication
         QApplication.quit()
 
-
-        self.sidebar_frame.setLayout(sidebar_layout)
-
-        # Páginas principales
-        self.pages = QStackedWidget()
-        self.pages.addWidget(self.page_dashboard())      # 0
-        self.pages.addWidget(self.page_inventario())    # 1
-        self.pages.addWidget(self.page_crm())           # 2
-        self.pages.addWidget(self.page_contabilidad())  # 3
-        self.pages.addWidget(self.page_ventas())        # 4
-        self.pages.setStyleSheet("background: #FFFFFF;")
-
-        # Botón hamburguesa flotante para cuando la barra lateral esté oculta
-        self.floating_toggle_btn = QPushButton()
-        self.floating_toggle_btn.setIcon(QIcon.fromTheme("application-menu"))
-        self.floating_toggle_btn.setText("≡ Opciones")
-        self.floating_toggle_btn.setFixedHeight(40)
-        self.floating_toggle_btn.setStyleSheet('''
-            QPushButton {
-                background: #FFFFFF;
-                border: none;
-                font-size: 18px;
-                text-align: left;
-                padding-left: 16px;
-                border-radius: 8px;
-            }
-            QPushButton:hover {
-                background: black;
-            }
-        ''')
-        self.floating_toggle_btn.clicked.connect(self.toggle_sidebar)
-        self.floating_toggle_btn.hide()
-
-        # Widget contenedor para el área principal (botón hamburguesa y páginas)
-        self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout()
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(0)
-        self.content_widget.setLayout(self.content_layout)
-        self.content_layout.addWidget(self.floating_toggle_btn, alignment=Qt.AlignLeft)
-        self.content_layout.addWidget(self.pages)
-
-        # Añadir widgets al layout principal
-        main_layout.addWidget(self.sidebar_frame)
-        main_layout.addWidget(self.content_widget)
-        main_layout.setStretch(0, 0)
-        main_layout.setStretch(1, 1)
-        self.sidebar_visible = True
-
     def toggle_sidebar(self):
         self.sidebar_visible = not self.sidebar_visible
         self.sidebar_frame.setVisible(self.sidebar_visible)
         self.floating_toggle_btn.setVisible(not self.sidebar_visible)
+
+    def display_page(self, index):
+        """
+        Cambia la página mostrada en el QStackedWidget según el índice recibido.
+        """
+        self.pages.setCurrentIndex(index)
 
     def page_dashboard(self):
         widget = QWidget()
@@ -289,192 +237,601 @@ class MainWindow(QMainWindow):
         graph.setLayout(graph_layout)
         layout.addWidget(graph)
 
-        # Tabla resumen
-        from PySide6.QtWidgets import QTableWidget, QTableWidgetItem
-        table = QTableWidget(4, 3)
-        table.setHorizontalHeaderLabels(["Category name", "Value", "Change"])
-        data = [
-            ("Lorem Ipsum", "332", "+4.3%"),
-            ("Dolor", "173", "+2.1%"),
-            ("Sit amet", "96", "-2.5%"),
-            ("Consectetuer", "63", "+5.3%"),
-        ]
-        for row, (cat, val, chg) in enumerate(data):
-            table.setItem(row, 0, QTableWidgetItem(cat))
-            table.setItem(row, 1, QTableWidgetItem(val))
-            table.setItem(row, 2, QTableWidgetItem(chg))
-        table.setStyleSheet('''
-            QTableWidget {
-                background: #fff;
-                border-radius: 14px;
-                border: 1px solid #F1F1F1;
-                font-size: 15px;
-            }
-            QHeaderView::section {
-                background: #F6F7FB;
-                border: none;
-                font-weight: bold;
-                font-size: 15px;
-            }
-        ''')
-        table.setFixedHeight(140)
-        layout.addWidget(table)
-
-        # Tarjetas de objetos
-        obj_cards = QHBoxLayout()
-        for color, txt in [
-            ("#222B36", "Object name"),
-            ("#F87171", "Object name"),
-            ("#4ADE80", "Object name"),
-        ]:
-            card = QFrame()
-            card.setStyleSheet(f"""
-                QFrame {{
-                    background: {color};
-                    border-radius: 14px;
-                    min-width: 180px;
-                    max-width: 220px;
-                    min-height: 70px;
-                }}
-            """)
-            v = QVBoxLayout()
-            v.addWidget(QLabel(f"<span style='color:white;font-size:20px;'>📷</span>"))
-            v.addWidget(QLabel(f"<span style='color:white;font-size:16px;'>{txt}</span>"))
-            card.setLayout(v)
-            obj_cards.addWidget(card)
-        layout.addLayout(obj_cards)
+        layout.addStretch()
 
         widget.setLayout(layout)
         return widget
 
     def page_inventario(self):
+        from db.mongo_connection import get_all_inventario
         widget = QWidget()
         layout = QVBoxLayout()
-        widget.setStyleSheet("background: #F5F5F5;")
-        layout.setContentsMargins(40, 20, 40, 20)  # Márgenes consistentes
-        
-        # Título de la página
-        title_frame = QFrame()
-        title_frame.setStyleSheet("background: transparent;")
-        title_layout = QHBoxLayout()
-        title_layout.setContentsMargins(0, 0, 0, 20)
-        
-        title_label = QLabel("Gestión de Inventario")
-        title_label.setStyleSheet("""
-            QLabel {
-                color: #333333;
-                font-size: 24px;
-                font-weight: bold;
-            }
-        """)
-        
-        title_layout.addWidget(title_label)
-        title_layout.addStretch()
-        title_frame.setLayout(title_layout)
-        layout.addWidget(title_frame)
-        
-        # Contenedor de la tabla
-        table_container = QFrame()
-        table_container.setStyleSheet("""
-            QFrame {
-                background: white;
-                border-radius: 12px;
-                border: 1px solid #E0E0E0;
-            }
-        """)
-        table_layout = QVBoxLayout()
-        table_layout.setContentsMargins(0, 0, 0, 0)
-        
-        # Tabla de inventario (7 columnas)
-        table = QTableWidget(4, 7)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+        widget.setStyleSheet("background: #F6F7FB; border-radius: 18px;")
+
+        # Título
+        title = QLabel("Inventario")
+        title.setStyleSheet("font-size: 32px; color: #F0460E; font-weight: bold;")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        # Filtros de búsqueda
+        filter_layout = QHBoxLayout()
+        self.inventario_id_input = QLineEdit()
+        self.inventario_id_input.setPlaceholderText("Buscar por ID de producto")
+        from PySide6.QtWidgets import QDateEdit
+        self.inventario_fecha_input = QDateEdit()
+        self.inventario_fecha_input.setCalendarPopup(True)
+        self.inventario_fecha_input.setDisplayFormat("yyyy-MM-dd")
+        btn_buscar_producto = QPushButton("Buscar")
+        from db.mongo_connection import get_productos_by_id_fecha
+        def buscar_producto():
+            producto_id = self.inventario_id_input.text().strip()
+            fecha = self.inventario_fecha_input.date().toString("yyyy-MM-dd") if self.inventario_fecha_input.date().isValid() else None
+            if not producto_id and not fecha:
+                productos = get_all_inventario()
+            else:
+                productos = get_productos_by_id_fecha(producto_id if producto_id else None, fecha if fecha else None)
+            table.setRowCount(len(productos))
+            for row, item in enumerate(productos):
+                table.setItem(row, 0, QTableWidgetItem(str(item.get("referencia", ""))))
+                table.setItem(row, 1, QTableWidgetItem(str(item.get("nombre", ""))))
+                table.setItem(row, 2, QTableWidgetItem(str(item.get("cantidad", ""))))
+                table.setItem(row, 3, QTableWidgetItem(str(item.get("precio_unitario", ""))))
+                table.setItem(row, 4, QTableWidgetItem(str(item.get("precio_total", ""))))
+                table.setItem(row, 5, QTableWidgetItem(str(item.get("valor_venta", ""))))
+                table.setItem(row, 6, QTableWidgetItem(str(item.get("utilidad", ""))))
+                table.setItem(row, 7, QTableWidgetItem(str(item.get("fecha", ""))))
+        btn_buscar_producto.clicked.connect(buscar_producto)
+        filter_layout.addWidget(self.inventario_id_input)
+        filter_layout.addWidget(self.inventario_fecha_input)
+        filter_layout.addWidget(btn_buscar_producto)
+        layout.addLayout(filter_layout)
+
+        # Botones de acción
+        from PySide6.QtWidgets import QDialog, QFormLayout, QDialogButtonBox
+        from db.mongo_connection import insert_producto, update_producto, delete_producto, get_all_inventario
+        action_layout = QHBoxLayout()
+
+        # Tabla de inventario (debe estar antes de las funciones que la usan)
+        data = get_all_inventario()
+        headers = ["Referencia", "Nombre", "Cantidad", "Precio Unitario", "Precio Total", "Valor Venta", "Utilidad", "Fecha"]
+        table = QTableWidget()
+        table.setColumnCount(len(headers))
+        table.setHorizontalHeaderLabels(headers)
+        table.setRowCount(len(data))
+        for row, item in enumerate(data):
+            table.setItem(row, 0, QTableWidgetItem(str(item.get("referencia", ""))))
+            table.setItem(row, 1, QTableWidgetItem(str(item.get("nombre", ""))))
+            table.setItem(row, 2, QTableWidgetItem(str(item.get("cantidad", ""))))
+            table.setItem(row, 3, QTableWidgetItem(str(item.get("precio_unitario", ""))))
+            table.setItem(row, 4, QTableWidgetItem(str(item.get("precio_total", ""))))
+            table.setItem(row, 5, QTableWidgetItem(str(item.get("valor_venta", ""))))
+            table.setItem(row, 6, QTableWidgetItem(str(item.get("utilidad", ""))))
+            table.setItem(row, 7, QTableWidgetItem(str(item.get("fecha", ""))))
+        # Estilo: texto negro sobre fondo blanco
         table.setStyleSheet("""
             QTableWidget {
-                background: white;
-                border: none;
-                font-size: 15px;
-                alternate-background-color: #F9F9F9;
+                background: #fff;
+                color: #111;
+                font-size: 17px;
             }
             QHeaderView::section {
-                background: #F6F7FB;
-                border: none;
+                background: #F0460E;
+                color: #fff;
                 font-weight: bold;
-                font-size: 15px;
-                padding: 12px;
+                font-size: 17px;
+                border: none;
             }
-            QTableWidget::item {
-                padding: 12px;
-                border-bottom: 1px solid #F1F1F1;
+            QTableWidget QTableCornerButton::section {
+                background: #F0460E;
+                border: none;
             }
         """)
-        
-        # Configuración de la tabla 
-        table.setHorizontalHeaderLabels(["Referencia", "Nombre", "Cantidad", "Precio_unitario", "Precio_total", "Valor_Venta", "Utilidad"])
         table.horizontalHeader().setStretchLastSection(True)
-        table.verticalHeader().setVisible(False)
-        table.setAlternatingRowColors(True)
-        table.setSortingEnabled(True)
-        table.setEditTriggers(QTableWidget.NoEditTriggers)  # Hacerla de solo lectura
-        table.horizontalHeader().setStyleSheet("""
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        layout.addWidget(table)
+
+        def cargar_tabla_inventario():
+            data = get_all_inventario()
+            table.setRowCount(len(data))
+            for row, item in enumerate(data):
+                table.setItem(row, 0, QTableWidgetItem(str(item.get("referencia", ""))))
+                table.setItem(row, 1, QTableWidgetItem(str(item.get("nombre", ""))))
+                table.setItem(row, 2, QTableWidgetItem(str(item.get("cantidad", ""))))
+                table.setItem(row, 3, QTableWidgetItem(str(item.get("precio_unitario", ""))))
+                table.setItem(row, 4, QTableWidgetItem(str(item.get("precio_total", ""))))
+                table.setItem(row, 5, QTableWidgetItem(str(item.get("valor_venta", ""))))
+                table.setItem(row, 6, QTableWidgetItem(str(item.get("utilidad", ""))))
+                table.setItem(row, 7, QTableWidgetItem(str(item.get("fecha", ""))))
+            return data
+
+        def dialog_producto(producto=None):
+            from PySide6.QtWidgets import QDateEdit
+            from PySide6.QtCore import QDate
+            dialog = QDialog()
+            dialog.setWindowTitle("Agregar/Actualizar producto")
+            form = QFormLayout()
+            fecha_label = QLabel("Fecha")
+            fecha_edit = QDateEdit()
+            fecha_edit.setCalendarPopup(True)
+            fecha_edit.setDisplayFormat("yyyy-MM-dd")
+            if producto:
+                fecha_edit.setDate(QDate.fromString(producto.get("fecha", ""), "yyyy-MM-dd"))
+            else:
+                fecha_edit.setDate(QDate.currentDate())
+            referencia = QLineEdit()
+            if producto:
+                referencia.setText(producto.get("referencia", ""))
+            nombre = QLineEdit()
+            if producto:
+                nombre.setText(producto.get("nombre", ""))
+            cantidad = QLineEdit()
+            if producto:
+                cantidad.setText(str(producto.get("cantidad", "")))
+            precio_unitario = QLineEdit()
+            if producto:
+                precio_unitario.setText(str(producto.get("precio_unitario", "")))
+            precio_total = QLineEdit()
+            if producto:
+                precio_total.setText(str(producto.get("precio_total", "")))
+            valor_venta = QLineEdit()
+            if producto:
+                valor_venta.setText(str(producto.get("valor_venta", "")))
+            utilidad = QLineEdit()
+            if producto:
+                utilidad.setText(str(producto.get("utilidad", "")))
+            form.setVerticalSpacing(10)
+            form.addRow(fecha_label, fecha_edit)
+            form.addRow("Referencia", referencia)
+            form.addRow("Nombre", nombre)
+            form.addRow("Cantidad", cantidad)
+            form.addRow("Precio Unitario", precio_unitario)
+            form.addRow("Precio Total", precio_total)
+            form.addRow("Valor Venta", valor_venta)
+            form.addRow("Utilidad", utilidad)
+            buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+            form.addRow(buttons)
+            buttons.accepted.connect(dialog.accept)
+            buttons.rejected.connect(dialog.reject)
+            dialog.setLayout(form)
+            if dialog.exec() == QDialog.Accepted:
+                if not fecha_edit.date().isValid():
+                    QMessageBox.warning(dialog, "Error", "Debes seleccionar una fecha válida.")
+                    return None
+                if not referencia.text().strip():
+                    QMessageBox.warning(dialog, "Error", "El campo Referencia es obligatorio.")
+                    return None
+                return {
+                    "referencia": referencia.text().strip(),
+                    "nombre": nombre.text().strip(),
+                    "cantidad": int(cantidad.text().strip()) if cantidad.text().strip().isdigit() else 0,
+                    "precio_unitario": float(precio_unitario.text().strip()) if precio_unitario.text().strip().replace('.', '', 1).isdigit() else 0.0,
+                    "precio_total": float(precio_total.text().strip()) if precio_total.text().strip().replace('.', '', 1).isdigit() else 0.0,
+                    "valor_venta": float(valor_venta.text().strip()) if valor_venta.text().strip().replace('.', '', 1).isdigit() else 0.0,
+                    "utilidad": float(utilidad.text().strip()) if utilidad.text().strip().replace('.', '', 1).isdigit() else 0.0,
+                    "fecha": fecha_edit.date().toString("yyyy-MM-dd")
+                }
+            return None
+
+        def agregar_producto():
+            prod = dialog_producto()
+            if prod:
+                insert_producto(prod)
+                QMessageBox.information(table, "Éxito", "Producto agregado.")
+                cargar_tabla_inventario()
+
+        def actualizar_producto():
+            row = table.currentRow()
+            if row < 0:
+                QMessageBox.warning(table, "Error", "Selecciona un producto para actualizar.")
+                return
+            data = get_all_inventario()
+            producto = data[row]
+            prod_edit = dialog_producto(producto)
+            if prod_edit:
+                update_producto(str(producto["_id"]), prod_edit)
+                QMessageBox.information(table, "Éxito", "Producto actualizado.")
+                cargar_tabla_inventario()
+
+        def borrar_producto():
+            row = table.currentRow()
+            if row < 0:
+                QMessageBox.warning(table, "Error", "Selecciona un producto para borrar.")
+                return
+            data = get_all_inventario()
+            producto = data[row]
+            delete_producto(str(producto["_id"]))
+            QMessageBox.information(table, "Éxito", "Producto eliminado.")
+            cargar_tabla_inventario()
+
+        btn_agregar_producto = QPushButton("Agregar producto")
+        btn_agregar_producto.clicked.connect(agregar_producto)
+        btn_actualizar_producto = QPushButton("Actualizar producto")
+        btn_actualizar_producto.clicked.connect(actualizar_producto)
+        btn_borrar_producto = QPushButton("Borrar producto")
+        btn_borrar_producto.clicked.connect(borrar_producto)
+        action_layout.addWidget(btn_agregar_producto)
+        action_layout.addWidget(btn_actualizar_producto)
+        action_layout.addWidget(btn_borrar_producto)
+        layout.addLayout(action_layout)
+
+        # Cargar productos al iniciar
+        cargar_tabla_inventario()
+
+        # Tabla de inventario
+        data = get_all_inventario()
+        headers = ["Nombre", "Categoría", "Cantidad", "Precio", "Descripción"]
+        table = QTableWidget()
+        table.setColumnCount(len(headers))
+        table.setHorizontalHeaderLabels(headers)
+        table.setRowCount(len(data))
+        for row, item in enumerate(data):
+            table.setItem(row, 0, QTableWidgetItem(str(item.get("nombre", ""))))
+            table.setItem(row, 1, QTableWidgetItem(str(item.get("categoria", ""))))
+            table.setItem(row, 2, QTableWidgetItem(str(item.get("cantidad", ""))))
+            table.setItem(row, 3, QTableWidgetItem(str(item.get("precio", ""))))
+            table.setItem(row, 4, QTableWidgetItem(str(item.get("descripcion", ""))))
+        # Estilo: texto negro sobre fondo blanco
+        table.setStyleSheet("""
+            QTableWidget {
+                background: #fff;
+                color: #111;
+                font-size: 17px;
+            }
             QHeaderView::section {
-                background: #000000;
-                color: #FFFFFF;
+                background: #F0460E;
+                color: #fff;
                 font-weight: bold;
-                font-size: 15px;
-                padding: 12px;
+                font-size: 17px;
+                border: none;
+            }
+            QTableWidget QTableCornerButton::section {
+                background: #F0460E;
+                border: none;
             }
         """)
-        # Datos de ejemplo
-        data = [
-            ("Lorem Ipsum", "332", "$123,456", "$456,789", "$123,456", "$456,789", "$123,456"),
-            ("Dolor", "173", "$45,678", "$456,789", "$123,456", "$456,789", "$123,456"),
-            ("Sit amet", "96", "$12,345", "$456,789", "$123,456", "$456,789", "$123,456"),
-            ("Consectetuer", "63", "$8,901", "$456,789", "$123,456", "$456,789", "$123,456"),
-        ]
-        
-        # Llenar la tabla
-        for row, (referencia, nombre, cantidad, precio_unitario, precio_total, valor_venta, utilidad) in enumerate(data):
-            table.insertRow(row)
-            table.setItem(row, 0, QTableWidgetItem(referencia))
-            table.setItem(row, 1, QTableWidgetItem(nombre))
-            table.setItem(row, 2, QTableWidgetItem(cantidad))
-            table.setItem(row, 3, QTableWidgetItem(precio_unitario))
-            table.setItem(row, 4, QTableWidgetItem(precio_total))
-            table.setItem(row, 5, QTableWidgetItem(valor_venta))
-            table.setItem(row, 6, QTableWidgetItem(utilidad))
-        
-        # Ajustar tamaño de columnas
-        table.resizeColumnsToContents()
-        table.setColumnWidth(0, 200)  # Ancho fijo para la columna de nombre
-        
-        table_layout.addWidget(table)
-        table_container.setLayout(table_layout)
-        layout.addWidget(table_container)
-        layout.addStretch()
-        
+        table.horizontalHeader().setStretchLastSection(True)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        layout.addWidget(table)
+
         widget.setLayout(layout)
         return widget
 
     def page_crm(self):
+        from PySide6.QtWidgets import QMessageBox
+        from db.mongo_connection import get_cliente_by_id, get_all_clientes, insert_cliente, update_cliente, delete_cliente
         widget = QWidget()
         layout = QVBoxLayout()
-        widget.setStyleSheet("background: #FFFFFF;")
-        label = QLabel("CRM de Clientes")
-        label.setStyleSheet("color: black; font-size: 32px; font-weight: bold; margin-top: 80px;")
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+        widget.setStyleSheet("background: #F6F7FB; border-radius: 18px;")
+
+        # Título
+        label = QLabel("CRM Clientes")
+        label.setStyleSheet("font-size: 32px; color: #F0460E; font-weight: bold;")
         label.setAlignment(Qt.AlignCenter)
-        layout.addStretch()
         layout.addWidget(label)
-        layout.addStretch()
+
+        # Buscar cliente por ID
+        search_layout = QHBoxLayout()
+        self.cliente_id_input = QLineEdit()
+        self.cliente_id_input.setPlaceholderText("Buscar por ID de cliente")
+        btn_buscar_cliente = QPushButton("Buscar")
+        def buscar_cliente():
+            cliente_id = self.cliente_id_input.text().strip()
+            cliente = get_cliente_by_id(cliente_id)
+            if cliente:
+                self.cliente_id_form.setText(str(cliente.get("id", "")))
+                self.cliente_nombre_form.setText(cliente.get("nombre", ""))
+                self.cliente_segundo_nombre_form.setText(cliente.get("segundo_nombre", ""))
+                self.cliente_apellido_form.setText(cliente.get("apellido", ""))
+                self.cliente_segundo_apellido_form.setText(cliente.get("segundo_apellido", ""))
+                self.cliente_email_form.setText(cliente.get("email", ""))
+                self.cliente_tel_form.setText(cliente.get("telefono", ""))
+                self.cliente_segundo_tel_form.setText(cliente.get("segundo_telefono", ""))
+                self.cliente_sexo_form.setCurrentText(cliente.get("sexo", ""))
+                self.cliente_id_documento_form.setText(cliente.get("id_documento", ""))
+                QMessageBox.information(widget, "Cliente encontrado", f"Cliente {cliente_id} encontrado.")
+            else:
+                QMessageBox.warning(widget, "No encontrado", "No se encontró el cliente.")
+        btn_buscar_cliente.clicked.connect(buscar_cliente)
+        search_layout.addWidget(self.cliente_id_input)
+        search_layout.addWidget(btn_buscar_cliente)
+        layout.addLayout(search_layout)
+
+        # Formulario de cliente
+        form_layout = QFormLayout()
+        form_layout.setSpacing(12)
+        
+        # Campos de cliente
+        self.cliente_id_form = QLineEdit()
+        self.cliente_id_form.setPlaceholderText("ID del cliente")
+        self.cliente_id_form.setStyleSheet('''
+            QLineEdit {
+                background: #FFFFFF;
+                border: 2px solid #E0E7EF;
+                border-radius: 8px;
+                padding: 8px;
+                font-size: 14px;
+            }
+            QLineEdit:focus {
+                border-color: #F0460E;
+            }
+        ''')
+        form_layout.addRow("ID:", self.cliente_id_form)
+
+        self.cliente_nombre_form = QLineEdit()
+        self.cliente_nombre_form.setPlaceholderText("Nombre")
+        self.cliente_nombre_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("Nombre:", self.cliente_nombre_form)
+
+        self.cliente_segundo_nombre_form = QLineEdit()
+        self.cliente_segundo_nombre_form.setPlaceholderText("Segundo nombre")
+        self.cliente_segundo_nombre_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("Segundo nombre:", self.cliente_segundo_nombre_form)
+
+        self.cliente_apellido_form = QLineEdit()
+        self.cliente_apellido_form.setPlaceholderText("Apellido")
+        self.cliente_apellido_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("Apellido:", self.cliente_apellido_form)
+
+        self.cliente_segundo_apellido_form = QLineEdit()
+        self.cliente_segundo_apellido_form.setPlaceholderText("Segundo apellido")
+        self.cliente_segundo_apellido_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("Segundo apellido:", self.cliente_segundo_apellido_form)
+
+        self.cliente_email_form = QLineEdit()
+        self.cliente_email_form.setPlaceholderText("Correo electrónico")
+        self.cliente_email_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("Correo:", self.cliente_email_form)
+
+        self.cliente_tel_form = QLineEdit()
+        self.cliente_tel_form.setPlaceholderText("Teléfono")
+        self.cliente_tel_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("Teléfono:", self.cliente_tel_form)
+
+        self.cliente_segundo_tel_form = QLineEdit()
+        self.cliente_segundo_tel_form.setPlaceholderText("Segundo teléfono")
+        self.cliente_segundo_tel_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("Segundo teléfono:", self.cliente_segundo_tel_form)
+
+        self.cliente_sexo_form = QComboBox()
+        self.cliente_sexo_form.addItems(["Masculino", "Femenino", "Otro"])
+        self.cliente_sexo_form.setStyleSheet('''
+            QComboBox {
+                background: #FFFFFF;
+                border: 2px solid #E0E7EF;
+                border-radius: 8px;
+                padding: 8px;
+                font-size: 14px;
+            }
+            QComboBox:hover {
+                border-color: #F0460E;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: url("Style_app/down_arrow.png");
+                width: 12px;
+                height: 12px;
+            }
+        ''')
+        form_layout.addRow("Sexo:", self.cliente_sexo_form)
+
+        self.cliente_id_documento_form = QLineEdit()
+        self.cliente_id_documento_form.setPlaceholderText("ID documento")
+        self.cliente_id_documento_form.setStyleSheet(self.cliente_id_form.styleSheet())
+        form_layout.addRow("ID documento:", self.cliente_id_documento_form)
+
+        # Botones de acción
+        btn_agregar_cliente = QPushButton("Agregar cliente")
+        btn_agregar_cliente.setStyleSheet('''
+            QPushButton {
+                background: #3B82F6;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: #2563EB;
+            }
+        ''')
+        form_layout.addRow(btn_agregar_cliente)
+
+        btn_actualizar_cliente = QPushButton("Actualizar cliente")
+        btn_actualizar_cliente.setStyleSheet('''
+            QPushButton {
+                background: #10B981;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: #059669;
+            }
+        ''')
+        form_layout.addRow(btn_actualizar_cliente)
+
+        btn_eliminar_cliente = QPushButton("Eliminar cliente")
+        btn_eliminar_cliente.setStyleSheet('''
+            QPushButton {
+                background: #EF4444;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: #DC2626;
+            }
+        ''')
+        form_layout.addRow(btn_eliminar_cliente)
+
+        layout.addLayout(form_layout)
+
+        # Tabla de clientes
+        self.tabla_clientes = QTableWidget()
+        self.tabla_clientes.setColumnCount(10)
+        self.tabla_clientes.setHorizontalHeaderLabels([
+            "ID", "Nombre", "Segundo nombre", "Apellido", "Segundo apellido", 
+            "Correo", "Teléfono", "Segundo teléfono", "Sexo", "ID documento"
+        ])
+        self.tabla_clientes.setStyleSheet('''
+            QTableWidget {
+                background: #FFFFFF;
+                color: #111;
+                font-size: 14px;
+                alternate-background-color: #F5F5F5;
+                gridline-color: #E0E7EF;
+                selection-background-color: #F0460E;
+                selection-color: white;
+            }
+            QTableWidget::item {
+                padding: 8px;
+            }
+            QHeaderView::section {
+                background: #F0460E;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px;
+                border: none;
+            }
+        ''')
+        self.tabla_clientes.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tabla_clientes.setSelectionBehavior(QTableWidget.SelectRows)
+        self.tabla_clientes.setSelectionMode(QTableWidget.SingleSelection)
+        self.tabla_clientes.setAlternatingRowColors(True)
+        self.tabla_clientes.setSortingEnabled(True)
+        layout.addWidget(self.tabla_clientes)
+
+        # Funciones de cliente
+        def cargar_clientes_tabla():
+            clientes = get_all_clientes()
+            self.tabla_clientes.setRowCount(len(clientes))
+            for row, cliente in enumerate(clientes):
+                self.tabla_clientes.setItem(row, 0, QTableWidgetItem(str(cliente.get("id", ""))))
+                self.tabla_clientes.setItem(row, 1, QTableWidgetItem(cliente.get("nombre", "")))
+                self.tabla_clientes.setItem(row, 2, QTableWidgetItem(cliente.get("segundo_nombre", "")))
+                self.tabla_clientes.setItem(row, 3, QTableWidgetItem(cliente.get("apellido", "")))
+                self.tabla_clientes.setItem(row, 4, QTableWidgetItem(cliente.get("segundo_apellido", "")))
+                self.tabla_clientes.setItem(row, 5, QTableWidgetItem(cliente.get("email", "")))
+                self.tabla_clientes.setItem(row, 6, QTableWidgetItem(cliente.get("telefono", "")))
+                self.tabla_clientes.setItem(row, 7, QTableWidgetItem(cliente.get("segundo_telefono", "")))
+                self.tabla_clientes.setItem(row, 8, QTableWidgetItem(cliente.get("sexo", "")))
+                self.tabla_clientes.setItem(row, 9, QTableWidgetItem(cliente.get("id_documento", "")))
+
+        def agregar_cliente():
+            cliente = {
+                "id": self.cliente_id_form.text().strip(),
+                "nombre": self.cliente_nombre_form.text().strip(),
+                "segundo_nombre": self.cliente_segundo_nombre_form.text().strip(),
+                "apellido": self.cliente_apellido_form.text().strip(),
+                "segundo_apellido": self.cliente_segundo_apellido_form.text().strip(),
+                "email": self.cliente_email_form.text().strip(),
+                "telefono": self.cliente_tel_form.text().strip(),
+                "segundo_telefono": self.cliente_segundo_tel_form.text().strip(),
+                "sexo": self.cliente_sexo_form.currentText(),
+                "id_documento": self.cliente_id_documento_form.text().strip()
+            }
+            if not cliente["id"]:
+                QMessageBox.warning(widget, "Error", "El campo ID es obligatorio.")
+                return
+            insert_cliente(cliente)
+            QMessageBox.information(widget, "Éxito", "Cliente agregado.")
+            cargar_clientes_tabla()
+
+        def actualizar_cliente():
+            cliente_id = self.cliente_id_form.text().strip()
+            nuevos_datos = {
+                "nombre": self.cliente_nombre_form.text().strip(),
+                "segundo_nombre": self.cliente_segundo_nombre_form.text().strip(),
+                "apellido": self.cliente_apellido_form.text().strip(),
+                "segundo_apellido": self.cliente_segundo_apellido_form.text().strip(),
+                "email": self.cliente_email_form.text().strip(),
+                "telefono": self.cliente_tel_form.text().strip(),
+                "segundo_telefono": self.cliente_segundo_tel_form.text().strip(),
+                "sexo": self.cliente_sexo_form.currentText(),
+                "id_documento": self.cliente_id_documento_form.text().strip()
+            }
+            if not cliente_id:
+                QMessageBox.warning(widget, "Error", "El campo ID es obligatorio.")
+                return
+            update_cliente(cliente_id, nuevos_datos)
+            QMessageBox.information(widget, "Éxito", "Cliente actualizado.")
+            cargar_clientes_tabla()
+
+        def eliminar_cliente():
+            cliente_id = self.cliente_id_form.text().strip()
+            if not cliente_id:
+                QMessageBox.warning(widget, "Error", "El campo ID es obligatorio.")
+                return
+            result = delete_cliente(cliente_id)
+            if result.deleted_count:
+                QMessageBox.information(widget, "Éxito", "Cliente eliminado.")
+                cargar_clientes_tabla()
+                self.cliente_id_form.clear()
+                self.cliente_nombre_form.clear()
+                self.cliente_segundo_nombre_form.clear()
+                self.cliente_apellido_form.clear()
+                self.cliente_segundo_apellido_form.clear()
+                self.cliente_email_form.clear()
+                self.cliente_tel_form.clear()
+                self.cliente_segundo_tel_form.clear()
+                self.cliente_sexo_form.setCurrentIndex(0)
+                self.cliente_id_documento_form.clear()
+            else:
+                QMessageBox.warning(widget, "Error", "No se encontró el cliente a eliminar.")
+
+        def buscar_cliente():
+            cliente_id = self.cliente_id_input.text().strip()
+            cliente = get_cliente_by_id(cliente_id)
+            if cliente:
+                self.cliente_id_form.setText(str(cliente.get("id", "")))
+                self.cliente_nombre_form.setText(cliente.get("nombre", ""))
+                self.cliente_segundo_nombre_form.setText(cliente.get("segundo_nombre", ""))
+                self.cliente_apellido_form.setText(cliente.get("apellido", ""))
+                self.cliente_segundo_apellido_form.setText(cliente.get("segundo_apellido", ""))
+                self.cliente_email_form.setText(cliente.get("email", ""))
+                self.cliente_tel_form.setText(cliente.get("telefono", ""))
+                self.cliente_segundo_tel_form.setText(cliente.get("segundo_telefono", ""))
+                self.cliente_sexo_form.setCurrentText(cliente.get("sexo", ""))
+                self.cliente_id_documento_form.setText(cliente.get("id_documento", ""))
+                QMessageBox.information(widget, "Cliente encontrado", f"Cliente {cliente_id} encontrado.")
+            else:
+                QMessageBox.warning(widget, "No encontrado", "No se encontró el cliente.")
+
+        # Conectar señales
+        btn_agregar_cliente.clicked.connect(agregar_cliente)
+        btn_actualizar_cliente.clicked.connect(actualizar_cliente)
+        btn_eliminar_cliente.clicked.connect(eliminar_cliente)
+        self.cliente_id_input.textChanged.connect(buscar_cliente)
+
+        # Cargar datos iniciales
+        cargar_clientes_tabla()
+
         widget.setLayout(layout)
         return widget
 
     def page_contabilidad(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        widget.setStyleSheet("background: #FFFFFF;")
-        label = QLabel("Módulo de Contabilidad")
-        label.setStyleSheet("color: black; font-size: 32px; font-weight: bold; margin-top: 80px;")
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+        widget.setStyleSheet("background: #F6F7FB; border-radius: 18px;")
+        label = QLabel("Contabilidad")
+        label.setStyleSheet("font-size: 40px; color: #F0460E; font-weight: bold;")
         label.setAlignment(Qt.AlignCenter)
-        layout.addStretch()
         layout.addWidget(label)
         layout.addStretch()
         widget.setLayout(layout)
@@ -483,15 +840,13 @@ class MainWindow(QMainWindow):
     def page_ventas(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        widget.setStyleSheet("background: #FFFFFF;")
-        label = QLabel("Módulo de Ventas")
-        label.setStyleSheet("color: black; font-size: 32px; font-weight: bold; margin-top: 80px;")
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+        widget.setStyleSheet("background: #F6F7FB; border-radius: 18px;")
+        label = QLabel("Historial Ventas")
+        label.setStyleSheet("font-size: 40px; color: #F0460E; font-weight: bold;")
         label.setAlignment(Qt.AlignCenter)
-        layout.addStretch()
         layout.addWidget(label)
         layout.addStretch()
         widget.setLayout(layout)
         return widget
-
-    def display_page(self, index):
-        self.pages.setCurrentIndex(index)
