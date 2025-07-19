@@ -19,20 +19,6 @@ class DashboardManager(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(25)
 
-        title = QLabel("Panel de Control")
-        title_font = QFont()
-        title_font.setPointSize(18)
-        title_font.setBold(True)
-        title.setFont(title_font)
-        title.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                font-weight: 600;
-                color: #333333;
-                margin-bottom: 20px;
-            }
-        """)
-
         metrics_layout = QHBoxLayout()
         metrics_layout.setSpacing(15)
 
@@ -42,18 +28,17 @@ class DashboardManager(QWidget):
         ventas_mes = self.get_ventas_mes()
 
         metrics_layout.addWidget(self.create_metric_card("Ventas de Hoy", f"${ventas_hoy:,.2f}", "#4CAF50", "dollar-sign"))
-        metrics_layout.addWidget(self.create_metric_card("Ventas del Mes", f"${ventas_mes:,.2f}", "#2196F3", "trending-up"))
-        metrics_layout.addWidget(self.create_metric_card("Clientes Nuevos", str(clientes_nuevos), "#9C27B0", "users"))
+        metrics_layout.addWidget(self.create_metric_card("Ventas del Mes", f"${ventas_mes:,.2f}", "#2196F3", "chart-line"))
+        metrics_layout.addWidget(self.create_metric_card("Clientes Nuevos", str(clientes_nuevos), "#9C27B0", "user-plus"))
         metrics_layout.addWidget(self.create_metric_card("Bajo Stock", str(inventario_bajo), "#FF9800", "alert-triangle"))
 
-        layout.addWidget(title)
         layout.addLayout(metrics_layout)
 
         charts_layout = QHBoxLayout()
         charts_layout.setSpacing(15)
 
-        sales_chart = self.create_chart_frame("Ventas Recientes", "line")
-        products_chart = self.create_chart_frame("Productos más Vendidos", "bar")
+        sales_chart = self.create_chart_frame("Ventas Recientes")
+        products_chart = self.create_chart_frame("Productos más Vendidos")
 
         charts_layout.addWidget(sales_chart, 1)
         charts_layout.addWidget(products_chart, 1)
@@ -112,7 +97,8 @@ class DashboardManager(QWidget):
 
         return card
 
-    def create_chart_frame(self, title, chart_type):
+    # Crear un marco para el gráfico
+    def create_chart_frame(self, title):
         frame = QFrame()
         frame.setStyleSheet("""
             QFrame {

@@ -10,12 +10,11 @@ class LoginManager(QWidget):
 
     def __init__(self, db=None, parent=None):
         super().__init__(parent)
-        self.db = db
+        self.db = db #Conexión a la base de datos
         self.setWindowTitle("Inicio de Sesión")
-        self.setFixedSize(900, 600)
         self.setWindowModality(Qt.ApplicationModal)
         self.setWindowIcon(QIcon("assets/app_icon.png"))
-        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
+        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
 
         screen = self.screen()
         screen_geometry = screen.geometry()
@@ -30,6 +29,7 @@ class LoginManager(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
+        #Configuración del panel izquierdo
         left_panel = QFrame()
         left_panel.setStyleSheet("""
             QFrame {
@@ -37,8 +37,10 @@ class LoginManager(QWidget):
                 border: none;
             }
         """)
+        #Ancho del panel izquierdo
         left_panel.setFixedWidth(400)
 
+        #Configuración del panel izquierdo
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(40, 40, 40, 40)
         left_layout.setSpacing(20)
@@ -46,6 +48,7 @@ class LoginManager(QWidget):
 
         logo_label = QLabel()
         logo_pixmap = QPixmap("assets/logo_white.png")
+        #Configuración del logo
         if not logo_pixmap.isNull():
             logo_label.setPixmap(logo_pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         else:
@@ -57,19 +60,20 @@ class LoginManager(QWidget):
         logo_label.setAlignment(Qt.AlignCenter)
         left_layout.addWidget(logo_label, alignment=Qt.AlignCenter)
 
-        desc_label = QLabel("Sistema Integral de Gestión Comercial")
+        desc_label = QLabel("Sistema Integral \n Gestión de Inventario")
+        desc_label.setFont(QFont("Arial", 24, QFont.Bold))
         desc_label.setAlignment(Qt.AlignCenter)
         desc_label.setStyleSheet("""
             QLabel {
                 color: white;
-                font-size: 16px;
+                font-size: 24px;
                 margin-top: 20px;
             }
         """)
         left_layout.addWidget(desc_label)
         left_layout.addStretch()
 
-        copyright_label = QLabel(" 2024 Todos los derechos reservados")
+        copyright_label = QLabel(" 2024 Todos los derechos reservados \n Ingeniero Sergio Masso Giraldo")
         copyright_label.setAlignment(Qt.AlignCenter)
         copyright_label.setStyleSheet("color: rgba(255, 255, 255, 0.7);")
         left_layout.addWidget(copyright_label)
@@ -82,25 +86,29 @@ class LoginManager(QWidget):
             }
         """)
 
+        #Configuración del panel derecho
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(80, 40, 80, 40)
         right_layout.setSpacing(20)
 
         title = QLabel("Bienvenido")
-        title.setFont(QFont("Arial", 24, QFont.Bold))
-        title.setStyleSheet("color: #333333;")
+        title.setFont(QFont("Arial", 50, QFont.Bold))
+        title.setStyleSheet("color: #333333;font-size: 50px;")
         title.setAlignment(Qt.AlignCenter)
         right_layout.addStretch()
         right_layout.addWidget(title)
 
+        #Configuración del subtitulo
         subtitulo = QLabel("Inicia sesión para continuar")
-        subtitulo.setStyleSheet("color: #666666;")
+        subtitulo.setFont(QFont("Arial", 24, QFont.Bold))
+        subtitulo.setStyleSheet("color: #666666;font-size: 24px;") 
         subtitulo.setAlignment(Qt.AlignCenter)
         right_layout.addWidget(subtitulo)
 
         form_layout = QVBoxLayout()
         form_layout.setSpacing(15)
 
+        #Configuración del formulario
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("Usuario")
         self.username_input.setStyleSheet("""
@@ -110,12 +118,14 @@ class LoginManager(QWidget):
                 border-radius: 6px;
                 font-size: 14px;
                 min-width: 250px;
+                color: #333333;
             }
             QLineEdit:focus {
                 border: 1px solid #FF6B00;
             }
         """)
 
+        #Configuración del campo de contraseña
         self.password_input = QLineEdit()
         self.password_input.setPlaceholderText("Contraseña")
         self.password_input.setEchoMode(QLineEdit.Password)
@@ -126,6 +136,7 @@ class LoginManager(QWidget):
                 border-radius: 6px;
                 font-size: 14px;
                 min-width: 250px;
+                color: #333333;
             }
             QLineEdit:focus {
                 border: 1px solid #FF6B00;
@@ -171,6 +182,7 @@ class LoginManager(QWidget):
         """)
         login_btn.clicked.connect(self.attempt_login)
 
+        #Configuración del formulario
         form_layout.addWidget(QLabel("Usuario"))
         form_layout.addWidget(self.username_input)
         form_layout.addWidget(QLabel("Contraseña"))
@@ -178,7 +190,8 @@ class LoginManager(QWidget):
         form_layout.addWidget(show_password_btn, alignment=Qt.AlignRight)
         form_layout.addSpacing(10)
         form_layout.addWidget(login_btn)
-
+        
+        #Configuración del formulario
         right_layout.addLayout(form_layout)
         right_layout.addStretch()
 
@@ -196,26 +209,28 @@ class LoginManager(QWidget):
             self.password_input.setEchoMode(QLineEdit.Password)
             self.sender().setText("Mostrar contraseña")
 
+    #Conectando con la base de datos
     def attempt_login(self):
+        from db.mongo_connection import verificar_credenciales
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
 
-        print(f"[DEBUG] Intento de inicio de sesión para: {username}")
-
         if not username or not password:
-            print("[DEBUG] Validación fallida: campos vacíos")
             QMessageBox.warning(self, "Error", "Por favor ingrese usuario y contraseña")
             return
 
-        if username == "admin" and password == "admin123":
-            print("[DEBUG] Credenciales válidas, emitiendo señal...")
+        # Verificar credenciales
+        usuario = verificar_credenciales(username, password)
+        if usuario:  # Si se encontró un usuario válido
             try:
                 self.login_successful.emit(username)
-                print("[DEBUG] Señal emitida correctamente")
             except Exception as e:
-                print(f"[ERROR] Error al emitir señal: {str(e)}")
+                QMessageBox.critical(self, "Error", f"Error al iniciar sesión: {str(e)}")
         else:
-            print("[DEBUG] Credenciales inválidas")
-            QMessageBox.critical(self, "Error", "Usuario o contraseña incorrectos")
+            QMessageBox.critical(
+                self, 
+                "Error", 
+                "Usuario o contraseña incorrectos. Verifique sus credenciales."
+            )
             self.password_input.clear()
             self.password_input.setFocus()

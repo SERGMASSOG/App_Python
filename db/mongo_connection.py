@@ -17,7 +17,9 @@ try:
     usuarios_col = db["usuarios"]
     inventario_col = db["inventario"]
     ventas_col = db["ventas"]
-    crm_col = db["crm"]
+    crm_col = db["clientes"]
+    contabilidad_col = db["contabilidad"]
+    transacciones_col = db["transacciones"]
     
     # Crear índices para mejorar el rendimiento
     try:
@@ -277,12 +279,19 @@ def get_usuario_by_username(username: str) -> Optional[Dict[str, Any]]:
         print(f"Error al obtener usuario: {e}")
         return None
 
-def verificar_credenciales(username: str, password: str) -> Optional[Dict[str, Any]]:
+def get_usuario_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """Obtiene un usuario por su nombre de usuario"""
+    try:
+        return usuarios_col.find_one({"correo": email.lower().strip()})
+    except Exception as e:
+        print(f"Error al obtener usuario: {e}")
+        return None
+
+def verificar_credenciales(username: str, password: str):
     """Verifica las credenciales de un usuario"""
     try:
         usuario = usuarios_col.find_one({
-            "usuario": username.lower().strip(),
-            "activo": True
+            "usuario": username.lower().strip()
         })
         
         if usuario and usuario.get("contrasena") == password:  # En producción, usar hash

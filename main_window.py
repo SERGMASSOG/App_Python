@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+import sys
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QTabWidget, QFrame, QMessageBox)
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap
@@ -11,12 +12,14 @@ from Funciones.inventario_manager import InventarioManager
 from Funciones.dashboard import DashboardManager
 
 class MainWindow(QMainWindow):
-    def __init__(self, username, db, parent=None):
+    def __init__(self, username, email, db, parent=None):
         super().__init__(parent)
         self.username = username
+        self.email = email
         self.db = db    
         self.setWindowTitle("Sistema de Gestión")
         self.setMinimumSize(1200, 700)
+        self.setWindowIcon(QIcon("assets/icons/logo.png"))
 
         # Inicializar manejadores
         self.dashboard = DashboardManager()
@@ -92,7 +95,7 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.content_area, 1)
         main_layout.addWidget(content_container, 1)
 
-        self.show_tab("inicio")
+        self.show_tab("dashboard")
 
     def create_sidebar(self):
         sidebar = QFrame()
@@ -160,10 +163,10 @@ class MainWindow(QMainWindow):
 
         self.menu_buttons = {}
         menu_items = [
-            ("inicio", "Inicio", "home"),
+            ("dashboard", "Dashboard", "home"),
             ("crm", "Clientes", "users"),
             ("inventario", "Inventario", "package"),
-            ("ventas", "Ventas", "dollar-sign"),
+            ("ventas", "Ventas", "dollar"),
             ("contabilidad", "Contabilidad", "bar-chart-2")
         ]
 
@@ -171,7 +174,7 @@ class MainWindow(QMainWindow):
             btn = QPushButton(text)
             btn.setCheckable(True)
             btn.setIcon(QIcon(f"assets/icons/{icon}.png"))
-            btn.setIconSize(QSize(20, 20))
+            btn.setIconSize(QSize(24, 24))
             btn.clicked.connect(lambda checked, x=item_id: self.show_tab(x))
             self.menu_buttons[item_id] = btn
             layout.addWidget(btn)
@@ -200,7 +203,7 @@ class MainWindow(QMainWindow):
 
         user_name = QLabel(self.username)
         user_name.setObjectName("username")
-        user_email = QLabel("usuario@ejemplo.com")
+        user_email = QLabel(self.email)
 
         btn_logout = QPushButton("Cerrar sesión")
         btn_logout.setIcon(QIcon("assets/icons/log-out.png"))
@@ -269,10 +272,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.mobile_menu_btn)
         layout.addWidget(self.page_title)
         layout.addStretch()
-
+        # Botón de notificaciones
         btn_notifications = QPushButton()
         btn_notifications.setIcon(QIcon("assets/icons/bell.png"))
-        btn_notifications.setIconSize(QSize(20, 20))
+        btn_notifications.setIconSize(QSize(24, 24))
         btn_notifications.setFixedSize(40, 40)
         btn_notifications.setStyleSheet("""
             QPushButton {
@@ -320,9 +323,9 @@ class MainWindow(QMainWindow):
         self.ventas_manager.hide()
         self.contabilidad_manager.hide()
 
-        if tab_id == "inicio":
+        if tab_id == "dashboard":
             self.dashboard.show()
-            self.page_title.setText("Panel de Control")
+            self.page_title.setText("Dashboard")
         elif tab_id == "crm":
             self.crm_manager.show()
             self.page_title.setText("Gestión de Clientes")
@@ -340,10 +343,11 @@ class MainWindow(QMainWindow):
             btn.setChecked(btn_id == tab_id)
 
     def logout(self):
-        from login import LoginWindow
-        self.login_window = LoginWindow()
-        self.login_window.show()
+        """Cierra la sesión y cierra la aplicación"""
         self.close()
+        import sys
+        from main import main
+        sys.exit(main())
 
     def show_message(self, title, message, is_error=False):
         msg = QMessageBox()
