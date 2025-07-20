@@ -80,8 +80,8 @@
 ## 🖼️ Capturas de Pantalla
 
 <div align="center">
-  <img src="assets/icons/logo.png" alt="Vista previa 1" width="45%">
-  <img src="assets/app_icon.png" alt="Vista previa 2" width="45%">
+  <img src="assets/icons/loging.png" alt="Vista previa 1" width="45%">
+  <img src="assets/icons/login.png" alt="Vista previa 2" width="45%">
 </div>
 
 ## 📦 Dependencias Principales
@@ -102,4 +102,4 @@ Las contribuciones son bienvenidas. Por favor, lee nuestras [pautas de contribuc
 
 ## 📧 Contacto
 
-Para consultas o soporte, por favor contacta a [tu-email@ejemplo.com](masso_sergio@hotmail.com)
+Para consultas o soporte, por favor contacta a [masso_sergio@hotmail.com](mailto:masso_sergio@hotmail.com)
