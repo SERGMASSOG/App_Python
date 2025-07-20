@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 
 # Configuración de la conexión
-MONGO_URI = "mongodb+srv://sergiomasso:FD3jyrrJA5IQXozg@cluster0.ztucv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = ""
 DB_NAME = "Despliegue"
 
 # Inicialización del cliente y la base de datos
