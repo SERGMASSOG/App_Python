@@ -84,16 +84,22 @@ class InventarioManager(QWidget):
         button_style = """
             QPushButton {
                 padding: 8px 12px;
-                border: 1px solid #ddd;
+                border: none;
                 border-radius: 4px;
-                background-color: #f8f9fa;
+                background-color: #FF6B00;
+                color: white;
                 min-width: 100px;
+                font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #e9ecef;
+                background-color: #E05E00;
             }
             QPushButton:pressed {
-                background-color: #dee2e6;
+                background-color: #C35000;
+            }
+            QPushButton:disabled {
+                background-color: #CCCCCC;
+                color: #666666;
             }
         """
         
@@ -117,7 +123,7 @@ class InventarioManager(QWidget):
         btn_layout.addWidget(btn_exportar_excel)
         btn_layout.addWidget(btn_exportar_pdf)
 
-        # Tabla de inventario
+        # Configuración de la tabla
         self.table = QTableWidget()
         self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
@@ -133,41 +139,40 @@ class InventarioManager(QWidget):
         self.table.setStyleSheet("""
             QTableWidget {
                 background-color: white;
-                alternate-background-color: #FFF3E0;
-                gridline-color: #FFB74D;
-                border: 1px solid #FFB74D;
+                alternate-background-color: #f8f9fa;
+                gridline-color: #dee2e6;
+                border: 1px solid #dee2e6;
                 border-radius: 4px;
             }
             QHeaderView::section {
-                background-color: #FF9800;
+                background-color: #2c3e50;
                 color: white;
                 padding: 8px;
                 border: none;
-                border-right: 1px solid #F57C00;
-                border-bottom: 1px solid #F57C00;
+                border-right: 1px solid #3e4f61;
                 font-weight: bold;
+                font-size: 12px;
             }
             QTableWidget::item {
                 padding: 8px;
-                border-bottom: 1px solid #FFE0B2;
+                border-bottom: 1px solid #dee2e6;
+                color: #212529;
             }
             QTableWidget::item:selected {
-                background-color: #FFB74D;
-                color: white;
+                background-color: #e9ecef;
+                color: #212529;
             }
         """)
         
-        # Ajustar el tamaño de las columnas
+        # Ajustar el tamaño de las columnas automáticamente
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Interactive)
-        header.setStretchLastSection(True)
-        self.table.setColumnWidth(0, 120)  # Código
-        self.table.setColumnWidth(1, 200)  # Nombre
-        self.table.setColumnWidth(2, 250)  # Descripción
-        self.table.setColumnWidth(3, 120)  # Categoría
-        self.table.setColumnWidth(4, 100)  # Precio
-        self.table.setColumnWidth(5, 80)   # Stock
-        self.table.setColumnWidth(6, 80)   # Mínimo
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)  # Ajusta al contenido
+        header.setSectionResizeMode(2, QHeaderView.Stretch)  # La descripción se expande
+        header.setStretchLastSection(False)
+        
+        # Establecer tamaños mínimos para columnas importantes
+        self.table.setMinimumWidth(1000)  # Ancho mínimo para la tabla
+        self.table.horizontalHeader().setMinimumSectionSize(80)  # Ancho mínimo por columna
         
         # Configurar menú contextual
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)

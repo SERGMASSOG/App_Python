@@ -102,4 +102,4 @@ Las contribuciones son bienvenidas. Por favor, lee nuestras [pautas de contribuc
 
 ## 📧 Contacto
 
-Para consultas o soporte, por favor contacta a [tu-email@ejemplo.com](mailto:tu-email@ejemplo.com)
+Para consultas o soporte, por favor contacta a [tu-email@ejemplo.com](masso_sergio@hotmail.com)

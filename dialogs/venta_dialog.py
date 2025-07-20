@@ -396,7 +396,7 @@ class VentaDialog(QDialog):
                     precio = cantidad_spin.property("precio")
                     
                     # Verificar stock actual
-                    producto = db.productos.find_one({"_id": producto_id}, session=session)
+                    producto = db.inventario.find_one({"_id": producto_id}, session=session)
                     if not producto:
                         QMessageBox.warning(self, "Error", f"Producto no encontrado en la base de datos")
                         session.abort_transaction()
@@ -425,7 +425,7 @@ class VentaDialog(QDialog):
                 # Si llegamos aquí, hay suficiente stock para todos los productos
                 # Actualizar el stock de cada producto
                 for producto in productos:
-                    result = db.productos.update_one(
+                    result = db.inventario.update_one(
                         {"_id": producto['id_producto']},
                         {"$inc": {"stock": -producto['cantidad']}},
                         session=session
@@ -596,79 +596,82 @@ class SeleccionProductoDialog(QDialog):
         self.cargar_productos()
     
     def cargar_productos(self):
-        """Carga la lista de productos disponibles"""
+        """Carga la lista de productos disponibles del inventario"""
         try:
             db = get_db_connection()
             
-            # Primero, verificar la estructura de un producto para depuración
-            sample_product = db.productos.find_one()
-            if sample_product:
-                print("Estructura del producto:", list(sample_product.keys()))
+            # Obtener productos activos (donde estado no es 'inactivo' o el campo no existe)
+            query = {
+                "$or": [
+                    {"estado": {"$ne": "inactivo"}},
+                    {"estado": {"$exists": False}}  # Incluir productos sin campo estado
+                ]
+            }
             
-            # Obtener todos los productos activos
-            productos = list(db.productos.find({"estado": {"$ne": "inactivo"}}))
-            
-            print(f"Total de productos encontrados: {len(productos)}")
+            productos = list(db.inventario.find(query))
             
             self.producto_combo.clear()
             
             if not productos:
-                QMessageBox.information(self, "Sin productos", "No se encontraron productos en la base de datos.")
-                self.reject()
+                QMessageBox.information(
+                    self, 
+                    "Sin productos", 
+                    "No se encontraron productos disponibles en el inventario."
+                )
                 return
                 
             # Ordenar productos por nombre
-            productos_ordenados = sorted(productos, key=lambda x: str(x.get('nombre', '')).lower())
+            productos_ordenados = sorted(
+                productos, 
+                key=lambda x: x.get('nombre', '').lower()
+            )
+            
+            # Agregar productos al combo
+            print(f"Productos encontrados: {len(productos_ordenados)}")
+            available_products = 0
             
             for producto in productos_ordenados:
                 try:
-                    # Manejar diferentes estructuras de producto
-                    stock = float(producto.get('stock', 0) or 0)
-                    precio = float(producto.get('precio', 0) or producto.get('precio_venta', 0) or 0)
-                    codigo = str(producto.get('codigo', producto.get('codigo_barras', 'SIN-COD')))
+                    # Obtener datos del producto
+                    stock = float(producto.get('stock_actual', 0) or 0)  # Cambiado de 'stock' a 'stock_actual'
+                    precio = float(producto.get('precio', 0) or 0)  # Simplificado ya que solo usamos 'precio'
                     nombre = str(producto.get('nombre', 'Sin nombre')).strip()
+                    producto_id = str(producto.get('_id', ''))
+                    estado = producto.get('estado', 'No especificado')
                     
-                    # Validar que el producto tenga los datos mínimos requeridos
-                    if not nombre or nombre == 'Sin nombre':
-                        print(f"Producto sin nombre válido: {producto}")
-                        continue
-                        
-                    # Formatear el texto para mostrar en el combo
-                    stock_text = f"Stock: {int(stock) if stock.is_integer() else stock}" if stock >= 0 else "Sin stock"
-                    texto = f"{codigo} - {nombre} | Precio: ${precio:.2f} | {stock_text}"
+                    print(f"Producto: {nombre} | Stock: {stock} | Estado: {estado}")
                     
-                    # Almacenar los datos del producto
-                    producto_data = {
-                        'id': str(producto.get('_id')),
-                        'nombre': nombre,
-                        'precio': precio,
-                        'stock': stock,
-                        'codigo': codigo
-                    }
-                    
-                    # Agregar al combo
-                    self.producto_combo.addItem(texto, producto_data)
-                    
-                    # Deshabilitar el ítem si no hay stock
-                    index = self.producto_combo.count() - 1
-                    model = self.producto_combo.model()
-                    if stock <= 0:
-                        model.setData(model.index(index, 0), self.palette().color(self.backgroundRole()), Qt.BackgroundRole)
-                        model.setData(model.index(index, 0), self.palette().color(self.foregroundRole()).lighter(150), Qt.ForegroundRole)
+                    # Solo mostrar productos con stock disponible
+                    if stock > 0:
+                        available_products += 1
+                        display_text = f"{nombre} - ${precio:.2f} (Disponible: {stock})"
+                        self.producto_combo.addItem(display_text, producto_id)
                         
                 except Exception as e:
-                    print(f"Error al procesar producto {producto.get('_id')}: {str(e)}")
+                    print(f"Error procesando producto {producto.get('_id', '')}: {str(e)}")
                     continue
+                    
+            print(f"Productos con stock disponible: {available_products}")
+                    
+            if self.producto_combo.count() == 0:
+                QMessageBox.information(
+                    self,
+                    "Sin stock",
+                    "No hay productos con stock disponible en el inventario."
+                )
+                self.reject()
                 
         except Exception as e:
             import traceback
-            error_details = traceback.format_exc()
-            print(f"Error al cargar productos: {error_details}")
-            QMessageBox.critical(
-                self, 
-                "Error", 
+            error_msg = (
                 f"Error al cargar productos:\n{str(e)}\n\n"
                 "Por favor verifique la conexión a la base de datos y la estructura de los productos."
+            )
+            print(traceback.format_exc())
+            QMessageBox.critical(
+                self,
+                "Error",
+                error_msg
             )
             self.reject()
     
@@ -682,27 +685,70 @@ class SeleccionProductoDialog(QDialog):
     
     def obtener_datos(self):
         """Retorna los datos del formulario"""
-        producto = self.producto_combo.currentData()
-        if not producto:
-            QMessageBox.warning(self, "Error", "No se ha seleccionado un producto válido")
-            return None
+        try:
+            # Obtener el índice del producto seleccionado
+            index = self.producto_combo.currentIndex()
+            if index < 0:
+                QMessageBox.warning(self, "Error", "No se ha seleccionado un producto")
+                return None
+                
+            # Obtener el ID del producto desde los datos del combo
+            producto_id = self.producto_combo.itemData(index)
+            if not producto_id:
+                QMessageBox.warning(self, "Error", "No se pudo obtener el ID del producto")
+                return None
+                
+            # Obtener la cantidad seleccionada
+            cantidad = self.cantidad_spin.value()
             
-        cantidad = self.cantidad_spin.value()
-        stock_disponible = float(producto.get('stock', 0))
-        
-        # Validar stock solo si es un producto con stock controlado
-        if stock_disponible >= 0 and cantidad > stock_disponible:
-            QMessageBox.warning(
+            # Obtener el texto completo del ítem seleccionado
+            display_text = self.producto_combo.currentText()
+            
+            # Extraer nombre, precio y stock del texto mostrado
+            # El formato es: "Nombre - $precio (Disponible: X)"
+            try:
+                # Extraer nombre y el resto
+                name_part, rest = display_text.split(' - $', 1)
+                # Extraer precio y stock
+                price_part, stock_part = rest.split(' (Disponible: ', 1)
+                precio = float(price_part.strip())
+                stock_disponible = int(stock_part.replace(')', '').strip())
+                
+                # Validar stock
+                if cantidad > stock_disponible:
+                    QMessageBox.warning(
+                        self,
+                        "Stock insuficiente",
+                        f"No hay suficiente stock disponible. Stock actual: {stock_disponible}"
+                    )
+                    return None
+                    
+                return {
+                    'id_producto': producto_id,
+                    'nombre': name_part.strip(),
+                    'precio': precio,
+                    'cantidad': cantidad,
+                    'stock_disponible': stock_disponible
+                }
+                
+            except (ValueError, IndexError) as e:
+                print(f"Error al procesar los datos del producto: {str(e)}")
+                # Si hay un error al parsear, intentar con datos mínimos
+                return {
+                    'id_producto': producto_id,
+                    'nombre': display_text.split(' - ')[0] if ' - ' in display_text else display_text,
+                    'precio': 0.0,
+                    'cantidad': cantidad,
+                    'stock_disponible': 0
+                }
+                
+        except Exception as e:
+            print(f"Error en obtener_datos: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(
                 self,
-                "Stock insuficiente",
-                f"No hay suficiente stock disponible. Stock actual: {stock_disponible}"
+                "Error",
+                f"Error al obtener los datos del producto: {str(e)}"
             )
             return None
-            
-        return {
-            'id_producto': producto.get('id'),
-            'nombre': producto.get('nombre'),
-            'precio': float(producto.get('precio', 0)),
-            'cantidad': cantidad,
-            'stock_disponible': stock_disponible
-        }
