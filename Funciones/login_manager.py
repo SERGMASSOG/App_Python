@@ -73,7 +73,7 @@ class LoginManager(QWidget):
         left_layout.addWidget(desc_label)
         left_layout.addStretch()
 
-        copyright_label = QLabel(" 2024 Todos los derechos reservados \n Ingeniero Sergio Masso Giraldo")
+        copyright_label = QLabel(" 2024 Todos los derechos reservados \n Desarrollador Sergio Masso Giraldo")
         copyright_label.setAlignment(Qt.AlignCenter)
         copyright_label.setStyleSheet("color: rgba(255, 255, 255, 0.7);")
         left_layout.addWidget(copyright_label)

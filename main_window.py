@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QPushButton, QLabel, QTabWidget, QFrame, QMessageBox)
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap
+from ui_effects import UIEffects
 
 # Importar gestores de funcionalidades
 from Funciones.crm import CRMManager
@@ -16,23 +17,48 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.username = username
         self.email = email
-        self.db = db    
+        self.db = db  # Primero asignar db
         self.setWindowTitle("Sistema de Gestión")
-        self.setMinimumSize(1200, 700)
+        self.setMinimumSize(1200, 800)
         self.setWindowIcon(QIcon("assets/icons/logo.png"))
-
-        # Inicializar manejadores
-        self.dashboard = DashboardManager()
+        
+        # Inicializar manejadores después de tener self.db
+        self.dashboard = DashboardManager(self.db, parent=self)
         self.crm_manager = CRMManager()
-        self.ventas_manager = VentasManager(db=db, parent=self)
+        self.ventas_manager = VentasManager(self.db, parent=self)
         self.contabilidad_manager = ContabilidadManager()
-        self.inventario_manager = InventarioManager(db=db, parent=self)
-
+        self.inventario_manager = InventarioManager(self.db, parent=self)
+        
+        # Configurar la interfaz de usuario
         self.setup_ui()
+        
+        # Configurar el manejador de redimensionamiento
+        self.resizeEvent = self.on_resize
+
+    def on_resize(self, event):
+        """Maneja el evento de redimensionamiento de la ventana"""
+        width = self.width()
+        height = self.height()
+
+        # Evitar recalcular si el tamaño es muy similar
+        if hasattr(self, '_last_size'):
+            last_width, last_height = self._last_size
+            if abs(width - last_width) < 100 and abs(height - last_height) < 100:
+                return
+
+        # Actualizar el tamaño de las tarjetas si están disponibles
+        if hasattr(self, 'dashboard') and hasattr(self.dashboard, 'metrics'):
+            for card in self.dashboard.metrics.values():
+                if width < 1200:  # Si la ventana es pequeña
+                    card.setMaximumWidth(250)
+                else:
+                    card.setMaximumWidth(350)
+
+        # Guardar el tamaño actual para comparación
+        self._last_size = (width, height)
 
     def setup_ui(self):
         # Widget central
-        self.setWindowTitle(f"Bienvenido {self.username}")
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
@@ -363,3 +389,23 @@ class MainWindow(QMainWindow):
             }
         """)
         msg.exec_()
+
+    def setup_ui_effects(self):
+        """Configura los efectos de la interfaz de usuario"""
+        # Configurar transiciones para el stacked widget principal
+        UIEffects.setup_stack_transition(self.content_area)
+        
+        # Aplicar efectos hover a las tarjetas del dashboard
+        if hasattr(self, 'dashboard'):
+            self.setup_dashboard_effects()
+            
+        # Aplicar efectos a los botones del menú lateral
+        for btn in self.menu_buttons.values():
+            UIEffects.create_hover_button(btn, "#2D3748")
+    
+    def setup_dashboard_effects(self):
+        """Configura efectos para los elementos del dashboard"""
+        # Obtener todos los frames que son tarjetas en el dashboard
+        for child in self.dashboard.findChildren(QFrame):
+            if child.objectName().startswith('card_'):
+                UIEffects.create_hover_card(child, "#2D3748")
