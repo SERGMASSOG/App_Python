@@ -80,8 +80,8 @@
 ## 🖼️ Capturas de Pantalla
 
 <div align="center">
-  <img src="assets/icons/loging.png" alt="Vista previa 1" width="45%">
-  <img src="assets/icons/login.png" alt="Vista previa 2" width="45%">
+  <img src="assets/Login.png" alt="Pantalla de inicio de sesión" width="45%">
+  <img src="assets/logo_white.png" alt="Logo de la aplicación" width="45%">
 </div>
 
 ## 📦 Dependencias Principales
