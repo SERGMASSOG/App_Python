@@ -56,8 +56,6 @@ class Application:
             QMessageBox.critical(None, "Error", f"No se pudo iniciar la aplicación: {str(e)}")
             self.setup_login()
 
-        
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     with open("material_theme.qss", "r") as file:

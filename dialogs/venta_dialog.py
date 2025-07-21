@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QComboBox,
                              QLineEdit, QSpinBox, QDoubleSpinBox, QPushButton, QTableWidget,
                              QTableWidgetItem, QHeaderView, QMessageBox, QLabel, QDateEdit,
-                             QFrame, QSizePolicy)
+                             QFrame, QSizePolicy, QGroupBox, QDateTimeEdit)
 from PySide6.QtCore import Qt, QDate, Signal, QDateTime
 from PySide6.QtGui import QFont, QPixmap, QIcon
 from datetime import datetime
@@ -96,21 +96,56 @@ class VentaDialog(QDialog):
         # Formulario de la venta
         form_layout = QFormLayout()
         
+        # Sección de información del cliente
+        cliente_group = QGroupBox("Datos del Cliente")
+        cliente_layout = QFormLayout()
+        
         # Selección de cliente
         self.cliente_combo = QComboBox()
+        self.cliente_combo.setEditable(True)
+        self.cliente_combo.setInsertPolicy(QComboBox.NoInsert)
         self.cargar_clientes()
-        form_layout.addRow("Cliente*:", self.cliente_combo)
+        cliente_layout.addRow("Cliente*:", self.cliente_combo)
+        
+        # Botón para agregar nuevo cliente
+        btn_nuevo_cliente = QPushButton("Nuevo Cliente")
+        btn_nuevo_cliente.clicked.connect(self.agregar_nuevo_cliente)
+        cliente_layout.addRow("", btn_nuevo_cliente)
+        
+        cliente_group.setLayout(cliente_layout)
+        
+        # Sección de información de la venta
+        venta_group = QGroupBox("Información de la Venta")
+        venta_layout = QFormLayout()
         
         # Fecha de la venta
-        self.fecha_edit = QDateEdit()
+        self.fecha_edit = QDateTimeEdit()
         self.fecha_edit.setCalendarPopup(True)
-        self.fecha_edit.setDate(QDate.currentDate())
-        form_layout.addRow("Fecha:", self.fecha_edit)
+        self.fecha_edit.setDateTime(QDateTime.currentDateTime())
+        venta_layout.addRow("Fecha y Hora*:", self.fecha_edit)
         
         # Método de pago
         self.metodo_pago_combo = QComboBox()
         self.metodo_pago_combo.addItems(["Efectivo", "Tarjeta Crédito", "Tarjeta Débito", "Transferencia"])
-        form_layout.addRow("Método de pago*:", self.metodo_pago_combo)
+        venta_layout.addRow("Método de pago*:", self.metodo_pago_combo)
+        
+        # Aplicar IVA
+        self.aplicar_iva = QCheckBox("Aplicar IVA (19%)")
+        self.aplicar_iva.setChecked(True)
+        venta_layout.addRow("Impuestos:", self.aplicar_iva)
+        
+        # Descuento
+        self.descuento_spin = QDoubleSpinBox()
+        self.descuento_spin.setRange(0, 100)
+        self.descuento_spin.setSuffix("%")
+        self.descuento_spin.setValue(0)
+        venta_layout.addRow("Descuento:", self.descuento_spin)
+        
+        venta_group.setLayout(venta_layout)
+        
+        # Agregar grupos al layout principal
+        layout.addWidget(cliente_group)
+        layout.addWidget(venta_group)
         
         # Tabla de productos
         self.productos_label = QLabel("Productos:")
@@ -128,9 +163,32 @@ class VentaDialog(QDialog):
         btn_agregar = QPushButton("Agregar Producto")
         btn_agregar.clicked.connect(self.agregar_producto)
         
+        # Sección de totales
+        totales_group = QGroupBox("Totales")
+        totales_layout = QFormLayout()
+        
+        # Subtotal
+        self.subtotal_label = QLabel("$0.00")
+        totales_layout.addRow("Subtotal:", self.subtotal_label)
+        
+        # IVA
+        self.iva_label = QLabel("$0.00")
+        totales_layout.addRow("IVA (19%):", self.iva_label)
+        
+        # Descuento
+        self.descuento_label = QLabel("$0.00 (0%)")
+        totales_layout.addRow("Descuento:", self.descuento_label)
+        
         # Total
-        self.total_label = QLabel("Total: $0.00")
-        self.total_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        self.total_label = QLabel("$0.00")
+        self.total_label.setStyleSheet("font-weight: bold; font-size: 16px; color: #FF6B00;")
+        totales_layout.addRow("<b>Total a Pagar:</b>", self.total_label)
+        
+        totales_group.setLayout(totales_layout)
+        
+        # Conectar señales para actualización en tiempo real
+        self.descuento_spin.valueChanged.connect(self.actualizar_totales)
+        self.aplicar_iva.stateChanged.connect(self.actualizar_totales)
         
         # Botones del diálogo
         btn_box = QHBoxLayout()
@@ -158,13 +216,113 @@ class VentaDialog(QDialog):
     def cargar_clientes(self):
         """Carga la lista de clientes en el combo box"""
         try:
-            clientes = self.db.clientes.find({}, {'_id': 0, 'id_documento': 1, 'nombre': 1, 'apellido': 1})
+            clientes = self.db.clientes.find({}, {'_id': 0, 'id_documento': 1, 'nombre': 1, 'apellido': 1, 'correo': 1, 'telefono': 1})
             self.cliente_combo.clear()
+            
+            # Agregar opción por defecto
+            self.cliente_combo.addItem("Seleccione un cliente...", None)
+            
             for cliente in clientes:
-                nombre_completo = f"{cliente.get('nombre', '')} {cliente.get('apellido', '')} ({cliente.get('id_documento', '')})"
+                nombre_completo = f"{cliente.get('nombre', '')} {cliente.get('apellido', '')} - {cliente.get('id_documento', '')}"
                 self.cliente_combo.addItem(nombre_completo, cliente.get('id_documento'))
+                
+            # Si hay datos de venta, seleccionar el cliente correspondiente
+            if self.venta_data and 'cliente_id' in self.venta_data:
+                idx = self.cliente_combo.findData(self.venta_data['cliente_id'])
+                if idx >= 0:
+                    self.cliente_combo.setCurrentIndex(idx)
+                    
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error al cargar clientes: {str(e)}")
+    
+    def agregar_nuevo_cliente(self):
+        """Abre el diálogo para agregar un nuevo cliente"""
+        from dialogs.cliente_dialog import ClienteDialog
+        dialog = ClienteDialog(self)
+        if dialog.exec() == QDialog.Accepted:
+            self.cargar_clientes()  # Recargar la lista de clientes
+            
+    def actualizar_totales(self):
+        """Actualiza los totales de la factura"""
+        try:
+            # Calcular subtotal
+            subtotal = 0.0
+            for row in range(self.productos_table.rowCount()):
+                precio_item = self.productos_table.item(row, 1)
+                cantidad_item = self.productos_table.item(row, 2)
+                if precio_item and cantidad_item:
+                    subtotal += float(precio_item.data(Qt.UserRole)) * int(cantidad_item.text())
+            
+            # Calcular IVA
+            iva = subtotal * 0.19 if self.aplicar_iva.isChecked() else 0
+            
+            # Calcular descuento
+            descuento_porcentaje = self.descuento_spin.value()
+            descuento = (subtotal + iva) * (descuento_porcentaje / 100)
+            
+            # Calcular total
+            total = (subtotal + iva) - descuento
+            
+            # Actualizar etiquetas
+            self.subtotal_label.setText(f"${subtotal:,.2f}")
+            self.iva_label.setText(f"${iva:,.2f}")
+            self.descuento_label.setText(f"${descuento:,.2f} ({descuento_porcentaje}%)")
+            self.total_label.setText(f"${total:,.2f}")
+            
+        except Exception as e:
+            print(f"Error al actualizar totales: {str(e)}")
+    
+    def obtener_datos_venta(self):
+        """Retorna los datos del formulario de venta"""
+        cliente_idx = self.cliente_combo.currentIndex()
+        cliente_id = self.cliente_combo.itemData(cliente_idx)
+        
+        if not cliente_id:
+            QMessageBox.warning(self, "Validación", "Debe seleccionar un cliente")
+            return None
+            
+        # Obtener información del cliente
+        cliente = self.db.clientes.find_one({"id_documento": cliente_id})
+        if not cliente:
+            QMessageBox.warning(self, "Error", "No se encontró la información del cliente")
+            return None
+            
+        # Obtener productos
+        productos = []
+        for row in range(self.productos_table.rowCount()):
+            producto_id = self.productos_table.item(row, 0).data(Qt.UserRole)
+            cantidad = int(self.productos_table.item(row, 2).text())
+            precio = float(self.productos_table.item(row, 1).data(Qt.UserRole))
+            
+            productos.append({
+                "producto_id": producto_id,
+                "cantidad": cantidad,
+                "precio_unitario": precio
+            })
+        
+        # Calcular totales
+        subtotal = float(self.subtotal_label.text().replace('$', '').replace(',', ''))
+        iva = float(self.iva_label.text().replace('$', '').replace(',', ''))
+        descuento = float(self.descuento_label.text().split('$')[1].split(' ')[0].replace(',', ''))
+        total = float(self.total_label.text().replace('$', '').replace(',', ''))
+        
+        # Crear objeto de venta
+        venta = {
+            "cliente_id": cliente_id,
+            "cliente_nombre": f"{cliente.get('nombre', '')} {cliente.get('apellido', '')}",
+            "fecha": self.fecha_edit.dateTime().toString("yyyy-MM-dd HH:mm:ss"),
+            "metodo_pago": self.metodo_pago_combo.currentText(),
+            "productos": productos,
+            "subtotal": subtotal,
+            "impuestos": iva,
+            "descuento": descuento,
+            "total": total,
+            "estado": "Completada",
+            "creado_por": getattr(self.parent(), 'username', 'Sistema'),
+            "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        return venta
     
     def cargar_datos_venta(self):
         """Carga los datos de la venta en el formulario"""
@@ -245,8 +403,12 @@ class VentaDialog(QDialog):
             producto_id = producto_data['id_producto']
             nombre = producto_data['nombre']
             precio = float(producto_data['precio'])
-            stock_disponible = int(producto_data.get('stock_disponible', 0))
+            stock_disponible = int(producto_data['stock_disponible'])
             cantidad = int(producto_data.get('cantidad', 1))
+            codigo = producto_data.get('codigo', '')
+
+            # Mostrar nombre con código
+            nombre_completo = f"{codigo} - {nombre}" if codigo else nombre
             
             # Validar que haya stock disponible
             if stock_disponible <= 0:
@@ -262,7 +424,7 @@ class VentaDialog(QDialog):
             cantidad = min(cantidad, stock_disponible) if stock_disponible > 0 else 1
             
             # Crear widget para el nombre del producto con el ID como propiedad
-            nombre_widget = QLabel(nombre)
+            nombre_widget = QLabel(nombre_completo)
             nombre_widget.setProperty('producto_id', str(producto_id))
             
             # Configurar el precio
@@ -333,6 +495,7 @@ class VentaDialog(QDialog):
     def eliminar_fila(self):
         """Elimina la fila seleccionada de la tabla"""
         button = self.sender()
+        
         if button:
             row = self.productos_table.indexAt(button.pos()).row()
             self.productos_table.removeRow(row)
@@ -363,11 +526,9 @@ class VentaDialog(QDialog):
         if not self.metodo_pago_combo.currentText():
             QMessageBox.warning(self, "Validación", "Debe seleccionar un método de pago")
             return
-            
-        self.accept()
     
-    def obtener_datos(self):
-        """Retorna los datos del formulario como un diccionario"""
+    def obtener_datos_venta(self):
+        """Retorna los datos de la venta como un diccionario"""
         try:
             # Validar cliente seleccionado
             if self.cliente_combo.currentIndex() < 0:
@@ -395,58 +556,162 @@ class VentaDialog(QDialog):
                     cantidad = cantidad_spin.value()
                     precio = cantidad_spin.property("precio")
                     
-                    # Verificar stock actual
-                    producto = db.inventario.find_one({"_id": producto_id}, session=session)
+                    # Verificar stock actual - manejar diferentes formatos de ID y campos de stock
+                    from bson import ObjectId
+                    
+                    # Intentar buscar el producto de diferentes maneras
+                    query = {
+                        "$or": [
+                            {"_id": ObjectId(producto_id) if isinstance(producto_id, str) else producto_id},
+                            {"codigo": str(producto_id)},
+                            {"id": str(producto_id)}
+                        ]
+                    }
+                    
+                    print(f"Buscando producto con query: {query}")
+                    producto = db.inventario.find_one(query, session=session)
+                    
                     if not producto:
-                        QMessageBox.warning(self, "Error", f"Producto no encontrado en la base de datos")
+                        QMessageBox.warning(
+                            self, 
+                            "Error", 
+                            f"Producto con ID {producto_id} no encontrado en la base de datos. "
+                            f"Colecciones disponibles: {db.list_collection_names()}"
+                        )
                         session.abort_transaction()
                         return None
-                        
-                    stock_actual = int(producto.get('stock', 0))
+                    
+                    # Obtener el stock disponible (manejar diferentes nombres de campo)
+                    stock_actual = int(
+                        producto.get('stock_actual') or 
+                        producto.get('stock') or 
+                        producto.get('cantidad') or 
+                        0
+                    )
+                    
+                    print(f"Producto encontrado: {producto.get('nombre')}, Stock: {stock_actual}")
+                    
                     if cantidad > stock_actual:
                         QMessageBox.warning(
                             self, 
                             "Stock insuficiente",
-                            f"No hay suficiente stock para {producto.get('nombre', 'el producto')}. "
-                            f"Stock actual: {stock_actual}"
+                            f"No hay suficiente stock para {producto.get('nombre', 'el producto')}.\n"
+                            f"Stock actual: {stock_actual}\n"
+                            f"Solicitado: {cantidad}"
                         )
                         session.abort_transaction()
                         return None
                     
                     # Agregar a la lista de productos
                     productos.append({
-                        'id_producto': producto_id,
+                        'id_producto': producto['_id'],  # Usar el _id real del documento
                         'nombre': producto.get('nombre', 'Producto desconocido'),
                         'cantidad': cantidad,
                         'precio_unitario': precio,
-                        'subtotal': cantidad * precio
+                        'subtotal': cantidad * precio,
+                        'codigo': str(producto['_id'])  # Guardar el _id como código
                     })
                 
                 # Si llegamos aquí, hay suficiente stock para todos los productos
                 # Actualizar el stock de cada producto
                 for producto in productos:
+                    # Buscar el producto nuevamente para asegurarnos de tener los datos actualizados
+                    from bson import ObjectId
+                    
+                    # Intentar convertir el ID a ObjectId si es necesario
+                    product_id = producto['id_producto']
+                    try:
+                        if isinstance(product_id, str):
+                            product_id = ObjectId(product_id)
+                    except:
+                        pass  # No es un ObjectId válido, usar como está
+                    
+                    # Usar solo _id para buscar el producto
+                    prod_query = {
+                        "_id": product_id
+                    }
+                    
+                    print(f"Buscando producto para actualizar stock con query: {prod_query}")
+                    print(f"Datos completos del producto: {producto}")
+                    
+                    # Actualizar todos los posibles campos de stock
+                    update_fields = {}
+                    for field in ['stock', 'stock_actual', 'cantidad']:
+                        update_fields[field] = -producto['cantidad']
+                    
+                    print(f"Actualizando stock para producto {producto.get('nombre')} con campos: {update_fields}")
+                    
+                    # Intentar actualizar el stock
                     result = db.inventario.update_one(
-                        {"_id": producto['id_producto']},
-                        {"$inc": {"stock": -producto['cantidad']}},
+                        prod_query,
+                        {"$inc": update_fields},
                         session=session
                     )
                     
-                    if result.modified_count == 0:
-                        QMessageBox.warning(
-                            self,
-                            "Error",
-                            f"No se pudo actualizar el stock del producto {producto['nombre']}"
+                    if result.matched_count == 0:
+                        # Intentar encontrar el producto manualmente para diagnóstico
+                        print("\n--- DIAGNÓSTICO DE ERROR DE PRODUCTO ---")
+                        print(f"Buscando producto con ID: {producto['id_producto']} (tipo: {type(producto['id_producto'])})")
+                        
+                        # Buscar por _id
+                        found = db.inventario.find_one({"_id": product_id})
+                        print(f"Búsqueda por _id: {'Encontrado' if found else 'No encontrado'}")
+                        
+                        # Buscar por código
+                        if 'codigo' in producto:
+                            found = db.inventario.find_one({"codigo": str(producto['codigo'])})
+                            print(f"Búsqueda por código {producto['codigo']}: {'Encontrado' if found else 'No encontrado'}")
+                        
+                        # Buscar por nombre
+                        if 'nombre' in producto:
+                            found = db.inventario.find_one({"nombre": producto['nombre']})
+                            print(f"Búsqueda por nombre '{producto['nombre']}': {'Encontrado' if found else 'No encontrado'}")
+                        
+                        # Listar algunos productos existentes para referencia
+                        print("\nPrimeros 5 productos en la colección:")
+                        for p in db.inventario.find().limit(5):
+                            print(f"- {p.get('nombre', 'Sin nombre')} (ID: {p.get('_id')}, Código: {p.get('codigo')}, Stock: {p.get('stock')})")
+                        
+                        print("--- FIN DE DIAGNÓSTICO ---\n")
+                        
+                        error_msg = (
+                            "Error al actualizar el inventario.\n\n"
+                            f"Producto: {producto.get('nombre', 'Desconocido')}\n"
+                            f"ID: {producto.get('id_producto')}\n"
+                            f"Código: {producto.get('codigo', 'No especificado')}\n\n"
+                            "Verifique la consola para más detalles de diagnóstico."
                         )
+                        QMessageBox.critical(self, "Error de Inventario", error_msg)
                         session.abort_transaction()
                         return None
+                        
+                    if result.modified_count == 0:
+                        print(f"Advertencia: No se modificó ningún documento para el producto {producto.get('nombre')}")
+                        # No abortamos la transacción por esto, solo mostramos advertencia
+                        QMessageBox.warning(
+                            self,
+                            "Advertencia",
+                            f"No se pudo actualizar el stock del producto {producto.get('nombre', 'desconocido')}. "
+                            "El stock podría no haberse actualizado correctamente."
+                        )
                 
                 # Calcular total
                 total = sum(p['subtotal'] for p in productos)
                 
+                # Obtener el ID del cliente seleccionado
+                cliente_id = self.cliente_combo.currentData()
+                
+                # Obtener los datos completos del cliente desde la base de datos
+                cliente = self.db.clientes.find_one({"id_documento": cliente_id})
+                
+                if not cliente:
+                    QMessageBox.warning(self, "Error", "No se encontró el cliente seleccionado")
+                    return None
+                
                 # Crear registro de venta
                 venta_data = {
-                    'id_cliente': cliente_data['id_documento'],
-                    'nombre_cliente': f"{cliente_data['nombre']} {cliente_data['apellido']}",
+                    'id_cliente': cliente.get('id_documento', ''),
+                    'nombre_cliente': f"{cliente.get('nombre', '')} {cliente.get('apellido', '')}".strip(),
                     'fecha': self.fecha_edit.date().toString("yyyy-MM-dd"),
                     'metodo_pago': self.metodo_pago_combo.currentText(),
                     'productos': productos,
@@ -468,7 +733,7 @@ class VentaDialog(QDialog):
                 if not AccountingUtils.record_sale_transaction({
                     'total': total,
                     'id_venta': str(result.inserted_id),
-                    'cliente': f"{cliente_data['nombre']} {cliente_data['apellido']}",
+                    'cliente': venta_data['nombre_cliente'],
                     'productos': productos,
                     'usuario': getattr(self, 'current_user', 'Sistema')
                 }):
@@ -600,15 +865,28 @@ class SeleccionProductoDialog(QDialog):
         try:
             db = get_db_connection()
             
-            # Obtener productos activos (donde estado no es 'inactivo' o el campo no existe)
+            # Primero, verificar la conexión y la colección
+            print("Colecciones disponibles:", db.list_collection_names())
+            
+            # Buscar productos con stock disponible y estado 'Disponible'
             query = {
-                "$or": [
-                    {"estado": {"$ne": "inactivo"}},
-                    {"estado": {"$exists": False}}  # Incluir productos sin campo estado
+                "$and": [
+                    {
+                        "$or": [
+                            {"stock": {"$gt": 0}},
+                            {"stock_actual": {"$gt": 0}},
+                            {"cantidad": {"$gt": 0}}
+                        ]
+                    },
+                    {
+                        "estado": "Disponible"
+                    }
                 ]
             }
             
-            productos = list(db.inventario.find(query))
+            print("Ejecutando consulta:", query)
+            productos = list(db.inventario.find(query).limit(100))  # Limitar a 100 para depuración
+            print(f"Se encontraron {len(productos)} productos")
             
             self.producto_combo.clear()
             
@@ -627,31 +905,30 @@ class SeleccionProductoDialog(QDialog):
             )
             
             # Agregar productos al combo
-            print(f"Productos encontrados: {len(productos_ordenados)}")
-            available_products = 0
-            
             for producto in productos_ordenados:
                 try:
-                    # Obtener datos del producto
-                    stock = float(producto.get('stock_actual', 0) or 0)  # Cambiado de 'stock' a 'stock_actual'
-                    precio = float(producto.get('precio', 0) or 0)  # Simplificado ya que solo usamos 'precio'
-                    nombre = str(producto.get('nombre', 'Sin nombre')).strip()
+                    # Obtener datos del producto con valores por defecto
+                    stock = int(producto.get('stock') or producto.get('stock_actual') or producto.get('cantidad') or 0)
+                    precio = float(producto.get('precio') or producto.get('precio_venta') or 0)
+                    nombre = str(producto.get('nombre') or producto.get('descripcion') or 'Producto sin nombre').strip()
                     producto_id = str(producto.get('_id', ''))
-                    estado = producto.get('estado', 'No especificado')
+                    codigo = producto.get('codigo', producto_id[:8])  # Usar parte del ID si no hay código
                     
-                    print(f"Producto: {nombre} | Stock: {stock} | Estado: {estado}")
+                    # Formatear el texto para mostrar
+                    display_text = f"{nombre} - ${precio:,.2f} (Stock: {stock})"
+                    if codigo and codigo != producto_id[:8]:  # Mostrar código solo si es diferente del ID
+                        display_text = f"{codigo} - {display_text}"
+                    self.producto_combo.addItem(display_text, {
+                        'id': producto_id,
+                        'nombre': nombre,
+                        'precio': precio,
+                        'stock': stock,
+                        'codigo': codigo
+                    })
                     
-                    # Solo mostrar productos con stock disponible
-                    if stock > 0:
-                        available_products += 1
-                        display_text = f"{nombre} - ${precio:.2f} (Disponible: {stock})"
-                        self.producto_combo.addItem(display_text, producto_id)
-                        
                 except Exception as e:
                     print(f"Error procesando producto {producto.get('_id', '')}: {str(e)}")
                     continue
-                    
-            print(f"Productos con stock disponible: {available_products}")
                     
             if self.producto_combo.count() == 0:
                 QMessageBox.information(
@@ -665,7 +942,7 @@ class SeleccionProductoDialog(QDialog):
             import traceback
             error_msg = (
                 f"Error al cargar productos:\n{str(e)}\n\n"
-                "Por favor verifique la conexión a la base de datos y la estructura de los productos."
+                "Por favor verifique la conexión a la base de datos."
             )
             print(traceback.format_exc())
             QMessageBox.critical(
@@ -674,73 +951,40 @@ class SeleccionProductoDialog(QDialog):
                 error_msg
             )
             self.reject()
-    
-    def validar_formulario(self):
-        """Valida los datos del formulario"""
-        if self.producto_combo.currentIndex() < 0:
-            QMessageBox.warning(self, "Validación", "Debe seleccionar un producto")
-            return
-            
-        self.accept()
-    
+
     def obtener_datos(self):
         """Retorna los datos del formulario"""
         try:
-            # Obtener el índice del producto seleccionado
             index = self.producto_combo.currentIndex()
             if index < 0:
                 QMessageBox.warning(self, "Error", "No se ha seleccionado un producto")
                 return None
                 
-            # Obtener el ID del producto desde los datos del combo
-            producto_id = self.producto_combo.itemData(index)
-            if not producto_id:
-                QMessageBox.warning(self, "Error", "No se pudo obtener el ID del producto")
+            producto_data = self.producto_combo.itemData(index)
+            if not producto_data:
+                QMessageBox.warning(self, "Error", "No se pudo obtener los datos del producto")
                 return None
                 
-            # Obtener la cantidad seleccionada
             cantidad = self.cantidad_spin.value()
             
-            # Obtener el texto completo del ítem seleccionado
-            display_text = self.producto_combo.currentText()
-            
-            # Extraer nombre, precio y stock del texto mostrado
-            # El formato es: "Nombre - $precio (Disponible: X)"
-            try:
-                # Extraer nombre y el resto
-                name_part, rest = display_text.split(' - $', 1)
-                # Extraer precio y stock
-                price_part, stock_part = rest.split(' (Disponible: ', 1)
-                precio = float(price_part.strip())
-                stock_disponible = int(stock_part.replace(')', '').strip())
+            # Validar stock (manejar diferentes nombres de campo)
+            stock_disponible = producto_data.get('stock') or producto_data.get('stock_actual') or producto_data.get('cantidad', 0)
+            if cantidad > stock_disponible:
+                QMessageBox.warning(
+                    self,
+                    "Stock insuficiente",
+                    f"No hay suficiente stock disponible. Stock actual: {stock_disponible}"
+                )
+                return None
                 
-                # Validar stock
-                if cantidad > stock_disponible:
-                    QMessageBox.warning(
-                        self,
-                        "Stock insuficiente",
-                        f"No hay suficiente stock disponible. Stock actual: {stock_disponible}"
-                    )
-                    return None
-                    
-                return {
-                    'id_producto': producto_id,
-                    'nombre': name_part.strip(),
-                    'precio': precio,
-                    'cantidad': cantidad,
-                    'stock_disponible': stock_disponible
-                }
-                
-            except (ValueError, IndexError) as e:
-                print(f"Error al procesar los datos del producto: {str(e)}")
-                # Si hay un error al parsear, intentar con datos mínimos
-                return {
-                    'id_producto': producto_id,
-                    'nombre': display_text.split(' - ')[0] if ' - ' in display_text else display_text,
-                    'precio': 0.0,
-                    'cantidad': cantidad,
-                    'stock_disponible': 0
-                }
+            return {
+                'id_producto': producto_data['id'],
+                'nombre': producto_data['nombre'],
+                'precio': producto_data['precio'],
+                'cantidad': cantidad,
+                'stock_disponible': producto_data['stock'],
+                'codigo': producto_data['codigo']
+            }
                 
         except Exception as e:
             print(f"Error en obtener_datos: {str(e)}")
@@ -752,3 +996,12 @@ class SeleccionProductoDialog(QDialog):
                 f"Error al obtener los datos del producto: {str(e)}"
             )
             return None
+
+    def validar_formulario(self):
+        """Valida los datos del formulario"""
+        if self.producto_combo.currentIndex() < 0:
+            QMessageBox.warning(self, "Validación", "Debe seleccionar un producto")
+            return
+            
+        self.accept()
+    
